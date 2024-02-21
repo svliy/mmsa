@@ -1,0 +1,83 @@
+{
+  "datasetCommonParams": {
+    "dataset_root_dir": "/home/server/wyz/MMSA_data",
+    "mosi": {
+      "aligned": {
+        "featurePath": "MOSI/Processed/aligned_50.pkl",
+        "seq_lens": [50, 50, 50],
+        "feature_dims": [768, 5, 20],
+        "train_samples": 1284,
+        "num_classes": 3,
+        "language": "en",
+        "KeyEval": "Loss"
+      },
+      "unaligned": {
+        "featurePath": "MOSI/Processed/unaligned_50.pkl",
+        "seq_lens": [50, 500, 375],
+        "feature_dims": [768, 5, 20],
+        "train_samples": 1284,
+        "num_classes": 3,
+        "language": "en",
+        "KeyEval": "Loss"
+      }
+    },
+    "mosei": {
+      "aligned": {
+        "featurePath": "MOSEI/Processed/aligned_50.pkl",
+        "seq_lens": [50, 50, 50],
+        "feature_dims": [768, 74, 35],
+        "train_samples": 16326,
+        "num_classes": 3,
+        "language": "en",
+        "KeyEval": "Loss"
+      },
+      "unaligned": {
+        "featurePath": "MOSEI/Processed/unaligned_50.pkl",
+        "seq_lens": [50, 500, 500],
+        "feature_dims": [768, 74, 35],
+        "train_samples": 16326,
+        "num_classes": 3,
+        "language": "en",
+        "KeyEval": "Loss"
+      }
+    },
+    "sims": {
+      "unaligned": {
+        "featurePath": "SIMS/Processed/unaligned.pkl",
+        "seq_lens": [39, 400, 55],
+        "feature_dims": [768, 25, 177],
+        "train_samples": 1368,
+        "num_classes": 3,
+        "language": "cn",
+        "KeyEval": "Loss"
+      }
+    }
+  },
+  
+
+
+
+
+
+"sims": {
+        "attn_dropout_a": 0.1,
+        "attn_dropout_v": 0.0,
+        "relu_dropout": 0.0,
+        "embed_dropout": 0.1,
+        "res_dropout": 0.2,
+        "dst_feature_dim_nheads": [50, 10],
+        "batch_size": 16,
+        "learning_rate": 0.002,
+        "nlevels": 2,
+        "conv1d_kernel_size_l": 5,
+        "conv1d_kernel_size_a": 1,
+        "conv1d_kernel_size_v": 1,
+        "text_dropout": 0.3,
+        "attn_dropout": 0.2,
+        "output_dropout": 0.1,
+        "grad_clip": 0.6,
+        "patience": 10,
+        "weight_decay": 0.001,
+        "transformers": "bert",
+        "pretrained": "bert-base-chinese"
+      }

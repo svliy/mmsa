@@ -1,1 +1,6 @@
 *.out
+/pt/
+/log/
+/dataset/
+/hf/
+/__pycache__/
