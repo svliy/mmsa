@@ -15,6 +15,7 @@ from ..utils import MetricsTop, dict_to_str
 from .HingeLoss import HingeLoss
 from model.loss import ClipInfoCELoss
 
+
 logger = logging.getLogger('MMSA')
 
 class MSE(nn.Module):
@@ -41,11 +42,23 @@ class DMD():
     def do_train(self, model, dataloader, return_epoch_results=False):
 
         # 0: DMD model, 1: Homo GD, 2: Hetero GD
-        params = list(model[0].parameters()) + \
-                 list(model[1].parameters()) + \
-                 list(model[2].parameters())
+        # params = list(model[0].parameters()) + \
+        #          list(model[1].parameters()) + \
+        #          list(model[2].parameters())
+        
+        # print(type(model[0].named_parameters()))
+        base_model = []
+        clip_model = []
+        for name, p in model[0].named_parameters():
+            if "clip" in name:
+                clip_model += [p]
+            else:
+                base_model += [p]
 
-        optimizer = optim.Adam(params, lr=self.args.learning_rate)
+        optimizer = optim.Adam([{'params': base_model},
+                                {'params': clip_model, 'lr': self.args.dictionary_lr},
+                                {'params': model[1].parameters()},
+                                {'params': model[2].parameters()}], lr=self.args.learning_rate)
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=self.args.patience)
 
         epochs, best_epoch = 0, 0
@@ -220,8 +233,7 @@ class DMD():
                     combined_loss.backward()
 
                     if self.args.grad_clip != -1.0:
-                        params = list(model[0].parameters()) + \
-                                 list(model[1].parameters()) + \
+                        params = base_model + clip_model + list(model[1].parameters()) + \
                                  list(model[2].parameters())
                         nn.utils.clip_grad_value_(params, self.args.grad_clip)
 

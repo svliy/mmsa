@@ -46,7 +46,11 @@
       "use_bert": true,
       "use_finetune": true,
       "attn_mask": true,
-      "update_epochs": 8
+      "update_epochs": 8,
+      "att_func_type": "sparsemax",
+      "pool_type": "max",
+      "sd_temperature": 2,
+      "loss_factor": 0.1
     },
     "debugParams": {
       "d_paras": [

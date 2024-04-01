@@ -15,6 +15,7 @@ from utils import assign_gpu, setup_seed
 from trains.singleTask.model import dmd
 from trains.singleTask.distillnets import get_distillation_kernel, get_distillation_kernel_homo
 from trains.singleTask.misc import softmax
+from torch.utils.tensorboard import SummaryWriter
 import sys
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:2"
@@ -52,8 +53,8 @@ def DMD_run(
     gpu_ids=[0], num_workers=4, verbose_level=1, mode = '', is_distill = False
 ):
     # Initialization
-    model_name = model_name.lower()
-    dataset_name = dataset_name.lower()
+    model_name = model_name.lower() # dmd
+    dataset_name = dataset_name.lower() # mosei
     
     # 读取配置文件
     if config_file != "":
@@ -83,6 +84,9 @@ def DMD_run(
 
     seeds = seeds if seeds != [] else [1111, 1112, 1113, 1114, 1115]
     logger = _set_logger(log_dir, model_name, dataset_name, verbose_level)
+
+    # 可视化工具
+    writer = SummaryWriter()
     
     if is_tune: # run tune
         setup_seed(seeds[0])
@@ -127,6 +131,7 @@ def DMD_run(
             has_debuged.append(cur_param)
             # actual running
             result = _run(args, num_workers, is_tune)
+            print(f'result: {result}')
             # save result to csv file
             if Path(csv_file).is_file():
                 df2 = pd.read_csv(csv_file)
@@ -139,7 +144,7 @@ def DMD_run(
             df2.loc[len(df2)] = res
             df2.to_csv(csv_file, index=None)
             logger.info(f"Results saved to {csv_file}.")
-    else:        
+    else:
         # 从配置文件中获取给定数据集dataset和模型model的回归配置config_file。
         args = get_config_regression(model_name, dataset_name, config_file)
         args.is_distill = is_distill  # use or not use distill, train use, test not use
@@ -187,6 +192,8 @@ def DMD_run(
             df.to_csv(csv_file, index=None)
             logger.info(f"Results saved to {csv_file}.")
             # logger.info(f"Config file: \n {args}")
+    
+    writer.flush()
 
 
 def _run(args, num_workers=4, is_tune=False, from_sena=False):
@@ -217,6 +224,7 @@ def _run(args, num_workers=4, is_tune=False, from_sena=False):
         model = []
         # 初始化模型架构
         model_dmd = getattr(dmd, 'DMD')(args)
+        # print(model_dmd)
         model_distill_homo = getattr(get_distillation_kernel_homo, 'DistillationKernel')(n_classes=1,
                                                                                hidden_size=
                                                                                args.dst_feature_dim_nheads[0],

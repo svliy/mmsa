@@ -70,15 +70,15 @@ class Query_model(nn.Module):
 
         # map image/text token to query space
         # 修改输入序列的特征维度
-        q = self.q_map(ft) # [bacth, token_num, ft_dim ---> sd_dim]
+        q = self.q_map(ft) # [bacth, token_num, ft_dim ---> sd_dim] = [bacth, token_num, sd_dim] [16, 500, 50]
 
-        k = sd #code_num, sd_dim
-        k = k.unsqueeze(0) # [1, code_num, sd_dim]
-        k = k.transpose(2, 1) # [1,sd_dim, sd_num]
+        k = sd # code_num, sd_dim (512, 50)
+        k = k.unsqueeze(0) # [1, code_num, sd_dim] = [1, 512, 50]
+        k = k.transpose(2, 1) # [1, sd_dim, sd_num] = [1, 50, 512]
         
         #-----calculate inner dot
         # [bacth, token_num, code_num]
-        inner_dot = torch.matmul(q, k)
+        inner_dot = torch.matmul(q, k) # [16 500 512] [batch_size token_num(N) code_num(C)]
 
         if return_token_att: #cosine sim
             token_att = inner_dot
