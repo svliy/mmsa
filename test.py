@@ -10,6 +10,6 @@ DMD_run(model_name='dmd',
         seeds=[1111],
         model_save_dir="./pt",
         res_save_dir="./result",
-        log_dir="./log",
+        log_dir="./log/test",
         mode='test',
         is_distill=False)

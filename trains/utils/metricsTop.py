@@ -77,8 +77,12 @@ class MetricsTop():
         return np.sum(np.round(y_pred) == np.round(y_true)) / float(len(y_true))
 
     def __eval_mosei_regression(self, y_pred, y_true, exclude_zero=False):
+        # print(f"The shape of y_pred is {y_pred.shape}")
+        # print(f"The shape of y_true is {y_true.shape}")
         test_preds = y_pred.view(-1).cpu().detach().numpy()
         test_truth = y_true.view(-1).cpu().detach().numpy()
+        # print(f"The shape of test_preds is {test_preds.shape}")
+        # print(f"The shape of test_truth is {test_truth.shape}")
 
         test_preds_a7 = np.clip(test_preds, a_min=-3., a_max=3.)
         test_truth_a7 = np.clip(test_truth, a_min=-3., a_max=3.)

@@ -33,8 +33,8 @@ class MMDataset(Dataset):
             self.text = data[self.mode]['text'].astype(np.float32)  # GLOVE feature
         self.vision = data[self.mode]['vision'].astype(np.float32)
         self.audio = data[self.mode]['audio'].astype(np.float32)
-        # self.raw_text = data[self.mode]['raw_text']
-        # self.ids = data[self.mode]['id']
+        self.raw_text = data[self.mode]['raw_text']
+        self.ids = data[self.mode]['id']
 
         # use custom features
         # 都没有用到
@@ -88,9 +88,7 @@ class MMDataset(Dataset):
             else:
                 # sims dataset 执行
                 self.vision_lengths = data[self.mode]['vision_lengths']
-        # 这段代码在干啥？
         self.audio[self.audio == -np.inf] = 0
-        # 目前没有作用？
         if 'need_normalized' in self.args and self.args['need_normalized']:
             self.__normalize()
     
@@ -156,12 +154,12 @@ class MMDataset(Dataset):
 
     def __getitem__(self, index):
         sample = {
-            # 'raw_text': self.raw_text[index],
+            'raw_text': self.raw_text[index],
             'text': torch.Tensor(self.text[index]), 
             'audio': torch.Tensor(self.audio[index]),
             'vision': torch.Tensor(self.vision[index]),
             'index': index,
-            # 'id': self.ids[index],
+            'id': self.ids[index],
             # 'M': 
             # 'A': 
             'labels': {k: torch.Tensor(v[index].reshape(-1)) for k, v in self.labels.items()}

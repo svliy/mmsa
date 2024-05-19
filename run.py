@@ -15,7 +15,6 @@ from utils import assign_gpu, setup_seed
 from trains.singleTask.model import dmd
 from trains.singleTask.distillnets import get_distillation_kernel, get_distillation_kernel_homo
 from trains.singleTask.misc import softmax
-from torch.utils.tensorboard import SummaryWriter
 import sys
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:2"
@@ -85,9 +84,6 @@ def DMD_run(
     seeds = seeds if seeds != [] else [1111, 1112, 1113, 1114, 1115]
     logger = _set_logger(log_dir, model_name, dataset_name, verbose_level)
 
-    # 可视化工具
-    writer = SummaryWriter()
-    
     if is_tune: # run tune
         setup_seed(seeds[0])
         logger.info(f"Tuning with seed {seeds[0]}")
@@ -188,12 +184,12 @@ def DMD_run(
                 mean = round(np.mean(values)*100, 2)
                 std = round(np.std(values)*100, 2)
                 res.append((mean, std))
+            print(res)
             df.loc[len(df)] = res
             df.to_csv(csv_file, index=None)
             logger.info(f"Results saved to {csv_file}.")
             # logger.info(f"Config file: \n {args}")
     
-    writer.flush()
 
 
 def _run(args, num_workers=4, is_tune=False, from_sena=False):
@@ -260,21 +256,26 @@ def _run(args, num_workers=4, is_tune=False, from_sena=False):
     # trainning loop
     trainer = ATIO().getTrain(args)
 
-    # 训练不会执行这个测试部分
+    # 测试部分
     if args.mode == 'test':
-        model.load_state_dict(torch.load(f'./pt/{args.dataset_name}/dmd_{args.dataset_name}.pth'))
+        # model.load_state_dict(torch.load(f'./pt/dmd_{args.dataset_name}.pth'))
+        # model.load_state_dict(torch.load('/workspace/projects/mmsa/pt/test/mosi_512_7.pth'))
+        model.load_state_dict(torch.load('/workspace/projects/mmsa/pt/May12_00-59-04_ea6f534ea7b8mosei/21.pth'))
+        # model.load_state_dict(torch.load('/workspace/projects/mmsa/pt/May13_21-58-40_ea6f534ea7b8mosei/11.pth'))
+        # model.load_state_dict(torch.load('/workspace/projects/mmsa/pt/May14_06-23-11_ea6f534ea7b8mosei/14.pth'))
+        # model.load_state_dict(torch.load('/workspace/projects/mmsa/pt/May14_17-16-50_ea6f534ea7b8mosi/20.pth'))
 
-        results = trainer.do_test(model, dataloader['test'], mode="TEST")
+        # results = trainer.do_test(model, dataloader['test'], mode="TEST")
+        results = trainer.do_test(model, dataloader['train'], mode="TEST")
         sys.stdout.flush()
         input('[Press Any Key to start another run]')
     else:
+        # 随机测试
+        # trainer.do_test(model[0], dataloader['test'], mode="TEST")
         # 训练部分
         epoch_results = trainer.do_train(model, dataloader, return_epoch_results=from_sena)
         # last save model
-        # 每训练1个epoch，保存一个模型权重
-        model[0].load_state_dict(torch.load(f'/workspace/projects/mmsa/pt/{args.dataset_name}/dmd_{args.dataset_name}.pth'))
-        # 测试部分
-        # 只测试一次
+        # model[0].load_state_dict(torch.load(f'/workspace/projects/mmsa/pt//dmd_{args.dataset_name}.pth'))
         results = trainer.do_test(model[0], dataloader['test'], mode="TEST")
 
         del model

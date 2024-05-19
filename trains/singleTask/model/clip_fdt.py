@@ -71,6 +71,8 @@ class Query_model(nn.Module):
         # map image/text token to query space
         # 修改输入序列的特征维度
         q = self.q_map(ft) # [bacth, token_num, ft_dim ---> sd_dim] = [bacth, token_num, sd_dim] [16, 500, 50]
+        
+        # q = ft
 
         k = sd # code_num, sd_dim (512, 50)
         k = k.unsqueeze(0) # [1, code_num, sd_dim] = [1, 512, 50]
@@ -99,8 +101,9 @@ class Query_model(nn.Module):
 
         # temptural norm
         inner_dot = inner_dot / self.temperature #[bacth, token_num, code_num]
-
-        tmp_inner_dot = inner_dot.detach().clone()
+        # np.save("inner_dot.npy", inner_dot)
+        # tmp_inner_dot = inner_dot.detach().clone()
+        # tmp_inner_dot = 0
         # print(tmp_inner_dot.size())
 
         # pooling
@@ -116,6 +119,8 @@ class Query_model(nn.Module):
         # [bacth, code_num]
         att_weight = self.att_activation(inner_dot) #normaliztion
 
+        # print("att_weight", att_weight.shape)  
+
         #----calculate weighted sum of v
         #v = self.ln_v(ft) # map to v_space
         
@@ -126,7 +131,7 @@ class Query_model(nn.Module):
         
         if return_token_att:
             return token_att, att_ft, sd
-        return tmp_inner_dot, att_ft, sd
+        return att_weight, att_ft, sd
 
 class AllGather(torch.autograd.Function):
 
@@ -178,8 +183,11 @@ class Clip_FDT(nn.Module):
 
 
         # learnable FDT
-        # 字典
         self.space_dict = nn.Parameter(torch.randn(sd_num, sd_dim))
+        # nn.init.kaiming_normal_(self.space_dict, mode='fan_out', nonlinearity='relu')
+        # nn.init.kaiming_uniform_(self.space_dict, mode='fan_out', nonlinearity='relu')
+        nn.init.xavier_normal_(self.space_dict)
+        # nn.init.xavier_uniform_(self.space_dict)
 
         # query mapping
         self.img_query_model = Query_model(ft_dim=raw_img_ft_dim, sd_dim=sd_dim, temperature=sd_temperature, att_func_type=att_func_type, pool_type=pool_type)
@@ -288,9 +296,7 @@ class Clip_FDT(nn.Module):
         output = output.view(-1, *(output.shape[2:]))
         return output
 
-    def forward(self, images, texts, acoustics):
-        # input
-
+    def forward(self, texts, images, acoustics):
         # if type(input) is dict:
         #     images = input['images']
         #     texts = input['captions']
@@ -310,19 +316,19 @@ class Clip_FDT(nn.Module):
         # else:
         #     img_ft, patch_ft = img_output #for swin, only return 2 features
         
-        patch_ft = images
+        
 
         #extract text represenation
         # txt_ft, word_ft, raw_txt_ft, pad_mask = self.encode_text(texts, return_dense=True, 
         # return_padmask=True, return_raw_feature=True) #[bacth, dim]
 
         word_ft = texts
-
+        patch_ft = images
         acoustic_ft = acoustics
 
         #calculate FDT-based features
-        sd_img_att_weight, sd_img_ft, img_k = self.img_query_model(patch_ft, self.space_dict)
         sd_txt_att_weight , sd_txt_ft, txt_k = self.txt_query_model(word_ft, self.space_dict)
+        sd_img_att_weight, sd_img_ft, img_k = self.img_query_model(patch_ft, self.space_dict)
         sd_acoustic_att_weight , sd_acoustic_ft, acoustic_k = self.acoustic_query_model(acoustic_ft, self.space_dict)
 
         # l2 normalization
@@ -337,16 +343,16 @@ class Clip_FDT(nn.Module):
         logit_scale = self.logit_scale.exp()
         logit_scale.data = torch.clamp(logit_scale.data, max=100)
 
-        # Calculating the Loss
-        # 图像和文本之间的相似度
-        logits_per_image_sd_LV = logit_scale * sd_img_ft @ sd_txt_ft.t()
-        logits_per_text_sd_LV = logits_per_image_sd_LV.t()
-        # 图像和声音之间的相似度
-        logits_per_image_sd_VA = logit_scale * sd_img_ft @ sd_acoustic_ft.t()
-        logits_per_acoustic_sd_VA = logits_per_image_sd_VA.t()
-        # 文本和声音之间的相似度
-        logits_per_text_sd_LA = logit_scale * sd_txt_ft @ sd_acoustic_ft.t()
-        logits_per_acoustic_sd_LA = logits_per_text_sd_LA.t()
+        # # Calculating the Loss
+        # # 图像和文本之间的相似度
+        # logits_per_image_sd_LV = logit_scale * sd_img_ft @ sd_txt_ft.t()
+        # logits_per_text_sd_LV = logits_per_image_sd_LV.t()
+        # # 图像和声音之间的相似度
+        # logits_per_image_sd_VA = logit_scale * sd_img_ft @ sd_acoustic_ft.t()
+        # logits_per_acoustic_sd_VA = logits_per_image_sd_VA.t()
+        # # 文本和声音之间的相似度
+        # logits_per_text_sd_LA = logit_scale * sd_txt_ft @ sd_acoustic_ft.t()
+        # logits_per_acoustic_sd_LA = logits_per_text_sd_LA.t()
 
         # text_embeddings = sd_txt_ft
         # image_embeddings = sd_img_ft
@@ -358,8 +364,8 @@ class Clip_FDT(nn.Module):
         # logits_per_text_sd = sd_txt_ft @ gathered_sd_img_ft.t() * logit_scale
 
         # assert logits_per_image_sd.shape == logits_per_text_sd.shape
-
-        return (logits_per_image_sd_LV, logits_per_text_sd_LV), (logits_per_image_sd_VA, logits_per_acoustic_sd_VA), (logits_per_text_sd_LA, logits_per_acoustic_sd_LA)
+        return sd_txt_ft, sd_img_ft, sd_acoustic_ft, logit_scale, (sd_txt_att_weight, sd_img_att_weight, sd_acoustic_att_weight), self.space_dict
+        # return (logits_per_image_sd_LV, logits_per_text_sd_LV), (logits_per_image_sd_VA, logits_per_acoustic_sd_VA), (logits_per_text_sd_LA, logits_per_acoustic_sd_LA)
 
 def clip_fdt_vitb16(**kwargs):
     """'
