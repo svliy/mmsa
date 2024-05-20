@@ -364,7 +364,8 @@ class Clip_FDT(nn.Module):
         # logits_per_text_sd = sd_txt_ft @ gathered_sd_img_ft.t() * logit_scale
 
         # assert logits_per_image_sd.shape == logits_per_text_sd.shape
-        return sd_txt_ft, sd_img_ft, sd_acoustic_ft, logit_scale, (sd_txt_att_weight, sd_img_att_weight, sd_acoustic_att_weight), self.space_dict
+        return sd_txt_ft, sd_img_ft, sd_acoustic_ft
+        # return sd_txt_ft, sd_img_ft, sd_acoustic_ft, logit_scale, (sd_txt_att_weight, sd_img_att_weight, sd_acoustic_att_weight), self.space_dict
         # return (logits_per_image_sd_LV, logits_per_text_sd_LV), (logits_per_image_sd_VA, logits_per_acoustic_sd_VA), (logits_per_text_sd_LA, logits_per_acoustic_sd_LA)
 
 def clip_fdt_vitb16(**kwargs):
