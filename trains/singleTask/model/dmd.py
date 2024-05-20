@@ -284,7 +284,7 @@ class DMD(nn.Module):
 
         # homogeneous dictionary
         # The shape of output is [16, 50]
-        c_l_dict, c_v_dict, c_a_dict = self.homo_dict(c_l.permute(1, 0, 2).contiguous().detach(),
+        c_l_dict, c_v_dict, c_a_dict, dict_c = self.homo_dict(c_l.permute(1, 0, 2).contiguous().detach(),
                                                       c_v.permute(1, 0, 2).contiguous().detach(),
                                                       c_a.permute(1, 0, 2).contiguous().detach())
 
@@ -398,7 +398,7 @@ class DMD(nn.Module):
         last_h_a = last_hs = h_as[-1]
         
         # torch.Size([46, 1, 100]) torch.Size([496, 1, 100]) torch.Size([371, 1, 100])
-        s_l_dict, s_v_dict, s_a_dict = self.hetero_dict(h_ls.permute(1, 0, 2).contiguous().detach(),
+        s_l_dict, s_v_dict, s_a_dict, dict_s = self.hetero_dict(h_ls.permute(1, 0, 2).contiguous().detach(),
                                                         h_vs.permute(1, 0, 2).contiguous().detach(),
                                                         h_as.permute(1, 0, 2).contiguous().detach())
         
@@ -406,21 +406,21 @@ class DMD(nn.Module):
         # lva_att_weight = torch.cat((l_att_weight, v_att_weight, a_att_weight), dim=0)
 
         hs_proj_l_high = self.proj2_l_high(
-            F.dropout(F.relu(self.proj1_l_high(s_l_dict), inplace=True), p=self.output_dropout, training=self.training)
+            F.dropout(F.relu(self.proj1_l_high(last_h_l), inplace=True), p=self.output_dropout, training=self.training)
         )
-        hs_proj_l_high += s_l_dict
+        hs_proj_l_high += last_h_l
         logits_l_high = self.out_layer_l_high(hs_proj_l_high)
 
         hs_proj_v_high = self.proj2_v_high(
-            F.dropout(F.relu(self.proj1_v_high(s_v_dict), inplace=True), p=self.output_dropout, training=self.training)
+            F.dropout(F.relu(self.proj1_v_high(last_h_v), inplace=True), p=self.output_dropout, training=self.training)
         )
-        hs_proj_v_high += s_v_dict
+        hs_proj_v_high += last_h_v
         logits_v_high = self.out_layer_v_high(hs_proj_v_high)
 
         hs_proj_a_high = self.proj2_a_high(
-            F.dropout(F.relu(self.proj1_a_high(s_a_dict), inplace=True), p=self.output_dropout, training=self.training)
+            F.dropout(F.relu(self.proj1_a_high(last_h_a), inplace=True), p=self.output_dropout, training=self.training)
         )
-        hs_proj_a_high += s_a_dict
+        hs_proj_a_high += last_h_a
         logits_a_high = self.out_layer_a_high(hs_proj_a_high)
 
 
@@ -446,7 +446,8 @@ class DMD(nn.Module):
         output = self.out_layer(last_hs_proj)
 
         res = {
-            # 'codebook': codebook,
+            'dict_c': dict_c,
+            'dict_s': dict_s,
             # 'lva_att_weight': lva_att_weight,
             'c_l_dict': c_l_dict,
             'c_v_dict': c_v_dict,
@@ -490,9 +491,6 @@ class DMD(nn.Module):
             'last_h_l': last_h_l,
             'last_h_v': last_h_v,
             'last_h_a': last_h_a,
-            # 'h_ls': h_ls,
-            # 'h_as': h_as,
-            # 'h_vs': h_vs,
             'logits_c': logits_c,
             'output_logit': output
         }

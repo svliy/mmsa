@@ -3,6 +3,7 @@
 /log/
 /dataset/
 /hf/
+/result/
 /visualization
 /runs/
 /__pycache__/

@@ -186,7 +186,7 @@ class Clip_FDT(nn.Module):
         self.space_dict = nn.Parameter(torch.randn(sd_num, sd_dim))
         # nn.init.kaiming_normal_(self.space_dict, mode='fan_out', nonlinearity='relu')
         # nn.init.kaiming_uniform_(self.space_dict, mode='fan_out', nonlinearity='relu')
-        nn.init.xavier_normal_(self.space_dict)
+        # nn.init.xavier_normal_(self.space_dict)
         # nn.init.xavier_uniform_(self.space_dict)
 
         # query mapping
@@ -364,7 +364,7 @@ class Clip_FDT(nn.Module):
         # logits_per_text_sd = sd_txt_ft @ gathered_sd_img_ft.t() * logit_scale
 
         # assert logits_per_image_sd.shape == logits_per_text_sd.shape
-        return sd_txt_ft, sd_img_ft, sd_acoustic_ft
+        return sd_txt_ft, sd_img_ft, sd_acoustic_ft, self.space_dict
         # return sd_txt_ft, sd_img_ft, sd_acoustic_ft, logit_scale, (sd_txt_att_weight, sd_img_att_weight, sd_acoustic_att_weight), self.space_dict
         # return (logits_per_image_sd_LV, logits_per_text_sd_LV), (logits_per_image_sd_VA, logits_per_acoustic_sd_VA), (logits_per_text_sd_LA, logits_per_acoustic_sd_LA)
 

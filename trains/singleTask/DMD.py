@@ -55,25 +55,29 @@ class DMD():
 
         # 0: DMD model, 1: Homo GD, 2: Hetero GD
 
-        params = list(model[0].parameters()) + \
-                 list(model[1].parameters()) + \
-                 list(model[2].parameters())
+        # params = list(model[0].parameters()) + \
+        #          list(model[1].parameters()) + \
+        #          list(model[2].parameters())
         # print(type(model[0].named_parameters()))
-        # base_model = []
-        # hetero_dict_model = []
+        base_model = []
+        homo_dict_model = []
+        hetero_dict_model = []
 
-        # 分离出字典的参数
-        # for name, p in model[0].named_parameters():
-        #     if "hetero_dict" in name:
-        #         hetero_dict_model += [p]
-        #     else:
-        #         base_model += [p]
+        # 分离出字典部分的参数
+        for name, p in model[0].named_parameters():
+            if "homo_dict" in name:
+                homo_dict_model += [p]
+            elif "hetero_dict" in name:
+                hetero_dict_model += [p]
+            else:
+                base_model += [p]
 
-        # optimizer = optim.Adam([{'params': base_model},
-        #                         {'params': hetero_dict_model, 'lr': self.args.dictionary_lr}], 
-        #                         lr=self.args.learning_rate)
+        optimizer = optim.Adam([{'params': base_model},
+                                {'params': homo_dict_model, 'lr': self.args.dictionary_lr},
+                                {'params': hetero_dict_model, 'lr': self.args.dictionary_lr}], 
+                                lr=self.args.learning_rate)
 
-        optimizer = optim.Adam(params, lr=self.args.learning_rate)
+        # optimizer = optim.Adam(params, lr=self.args.learning_rate)
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, verbose=True, patience=self.args.patience)
 
         epochs, best_epoch = 0, 0
@@ -107,11 +111,13 @@ class DMD():
             left_epochs = self.args.update_epochs
             
             # 打印学习率
-            print("Epoch:{}  Lr:{:.2E}".format(epochs, optimizer.state_dict()['param_groups'][0]['lr']))
-            # print("Epoch:{}  Lr:{:.2E}".format(epochs, optimizer.state_dict()['param_groups'][1]['lr']))
+            print("Epoch:{}  Base-Lr:{:.2E}".format(epochs, optimizer.state_dict()['param_groups'][0]['lr']))
+            print("Epoch:{}  Homo-Lr:{:.2E}".format(epochs, optimizer.state_dict()['param_groups'][1]['lr']))
+            print("Epoch:{}  Hetero-Lr:{:.2E}".format(epochs, optimizer.state_dict()['param_groups'][2]['lr']))
 
             # 用于存储每次迭代时的字典
-            dict_table = []
+            dict_table_c = []
+            dict_table_s = []
 
             with tqdm(dataloader['train']) as td:
                 for batch_data in td:
@@ -131,7 +137,8 @@ class DMD():
 
                     # 保存每次迭代的字典
                     # print(output['codebook'].data[0])
-                    # dict_table.append(output['codebook'].data.detach().cpu().numpy())
+                    dict_table_c.append(output['dict_c'].data.detach().cpu().numpy())
+                    dict_table_s.append(output['dict_s'].data.detach().cpu().numpy())
                     
                     # logits for homo GD
                     logits_homo.append(output['logits_l_homo'])
@@ -230,7 +237,7 @@ class DMD():
                                     graph_distill_loss_homo + graph_distill_loss_hetero + \
                                     (loss_s_sr + loss_recon + (loss_sim+loss_ort) * 0.1) * 0.1
                     
-                    # homo loss
+                    # # homo loss
                     c_l_dict = output['c_l_dict']
                     c_v_dict = output['c_v_dict']
                     c_a_dict = output['c_a_dict']
@@ -288,7 +295,8 @@ class DMD():
                     optimizer.step()
 
 
-            # np.save(f'/workspace/projects/mmsa/visualization/{self.args.dataset_name}_task/dict_table_{epochs}.npy', np.array(dict_table))
+            np.save(f'/workspace/projects/mmsa/visualization/{self.args.dataset_name}_task/dict_table_{epochs}.npy', np.array(dict_table_c))
+            np.save(f'/workspace/projects/mmsa/visualization/{self.args.dataset_name}_task/dict_table_{epochs}.npy', np.array(dict_table_s))
             train_loss = train_loss / len(dataloader['train'])
             loss_homo = loss_homo / len(dataloader['train'])
             loss_hetero = loss_hetero / len(dataloader['train'])
@@ -296,7 +304,7 @@ class DMD():
             train_results = self.metrics(pred, true)
 
             self.writer.add_scalar('Loss/train', train_loss, epochs)
-            self.writer.add_scalar('Loss/train_main', train_loss - self.args.loss_factor * (loss_homo_dict + loss_hetero_dict), epochs)
+            self.writer.add_scalar('Loss/train_main', train_loss - self.args.loss_factor * (loss_homo + loss_hetero), epochs)
             self.writer.add_scalar('Loss/homo_dict', loss_homo, epochs)
             self.writer.add_scalar('Loss/hetero_dict', loss_hetero, epochs)
             
